@@ -1,4 +1,4 @@
-MODDIR="/data/adb/modules/playintegrityfix"
+MODDIR="/data/adb/modules/PlayIntegrityInject"
 
 if [ -z "$MMRL" ] && [ ! -z "$MAGISKTMP" ]; then
     pm path io.github.a13e300.ksuwebui > /dev/null 2>&1 && {
