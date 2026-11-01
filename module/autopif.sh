@@ -56,16 +56,20 @@ get_model_product_list() {
 
 # Get latest Pixel Canary information
 download https://developer.android.com/about/versions PIXEL_VERSIONS_HTML
-LATEST_URL=$(grep -o 'https://developer.android.com/about/versions/.*[0-9]"' PIXEL_VERSIONS_HTML | sort -ru | cut -d\" -f1 | head -n1)
-download "$LATEST_URL" PIXEL_LATEST_HTML
+LATEST_BETA=$(grep -B4 -A2 'data-icon="preview' PIXEL_VERSIONS_HTML | grep -o 'href="/about/versions/.*[0-9]"' | cut -d\" -f2)
+[ "$LATEST_BETA" ] || LATEST_BETA=$(grep -oE 'href="/about/versions/[0-9]{2}"' PIXEL_VERSIONS_HTML | cut -d\" -f2 | sort -ru | head -n1)
+download "https://developer.android.com$LATEST_BETA" PIXEL_LATEST_HTML
 
-# Get FI information
-FI_URL="https://developer.android.com$(grep -o 'href=".*download.*"' PIXEL_LATEST_HTML | grep 'qpr' | cut -d\" -f2 | head -n1)"
+# Get FI and OTA information and use the longer device list
+FI_URL="https://developer.android.com$(grep -o 'href=".*download.*"' PIXEL_LATEST_HTML | cut -d\" -f2 | sort -ru | head -n1)"
 download "$FI_URL" PIXEL_FI_HTML
+OTA_URL="https://developer.android.com$(grep -o 'href=".*download-ota.*"' PIXEL_LATEST_HTML | cut -d\" -f2 | sort -ru | head -n1)"
+download "$OTA_URL" PIXEL_OTA_HTML
+SRC=FI; [ "$(grep 'tr id=' PIXEL_FI_HTML | sed 's;.*<tr id="\(.*\)">.*;\1;' | wc -w)" -lt "$(grep 'tr id=' PIXEL_OTA_HTML | sed 's;.*<tr id="\(.*\)">.*;\1;' | wc -w)" ] && SRC=OTA
 
 # Extract device information
-MODEL_LIST="$(grep -A1 'tr id=' PIXEL_FI_HTML | grep 'td' | sed 's;.*<td>\(.*\)</td>.*;\1;')";
-PRODUCT_LIST="$(grep 'tr id=' PIXEL_FI_HTML | sed 's;.*<tr id="\(.*\)">.*;\1_beta;')";
+MODEL_LIST="$(grep -A1 'tr id=' PIXEL_${SRC}_HTML | grep 'td' | sed 's;.*<td>\(.*\)</td>.*;\1;')";
+PRODUCT_LIST="$(grep 'tr id=' PIXEL_${SRC}_HTML | sed 's;.*<tr id="\(.*\)">.*;\1_beta;')";
 
 # List available devices
 if [ "$1" = "--list" ] || [ "$1" = "-l" ]; then
@@ -108,10 +112,29 @@ if [ -z "$SECURITY_PATCH" ]; then
 	SECURITY_PATCH="${CANARY_ID}-05"
 fi
 
+# Add corresponding first API level
+case $DEVICE in
+	bluejay) DEVICE_INITIAL_SDK_INT=32;; # Pixel 6a
+	panther|cheetah) DEVICE_INITIAL_SDK_INT=33;; # Pixel 7 Series
+	lynx) DEVICE_INITIAL_SDK_INT=33;; # Pixel 7a
+	felix) DEVICE_INITIAL_SDK_INT=33;; # Pixel Fold
+	tangorpro) DEVICE_INITIAL_SDK_INT=33;; # Pixel Tablet
+	shiba|husky) DEVICE_INITIAL_SDK_INT=34;; # Pixel 8 Series
+	akita) DEVICE_INITIAL_SDK_INT=34;; # Pixel 8a
+	tokay|caiman|komodo|comet) DEVICE_INITIAL_SDK_INT=34;; # Pixel 9 Series
+	tegu) DEVICE_INITIAL_SDK_INT=35;; # Pixel 9a
+	frankel|blazer|mustang|rango) DEVICE_INITIAL_SDK_INT=36;; # Pixel 10 Series
+	stallion) DEVICE_INITIAL_SDK_INT=35;; # Pixel 10a; Actual 36
+	cubs|grizzly|kodiak|yogi) DEVICE_INITIAL_SDK_INT=37;; # Pixel 11 Series
+	*) DEVICE_INITIAL_SDK_INT=37;;
+esac
+
 # Preserve previous setting
+pifProp="$MODDIR/pif.prop"
+[ -f "/data/adb/pif.prop" ] && pifProp="/data/adb/pif.prop"
 spoofConfig="spoofBuild spoofProps spoofProvider spoofSignature spoofVendingBuild spoofVendingSdk DEBUG"
 for config in $spoofConfig; do
-	if grep -q "$config=true" "$MODDIR/pif.prop"; then
+	if grep -q "$config=true" "$pifProp"; then
 		eval "$config=true"
 	else
 		eval "$config=false"
@@ -125,6 +148,7 @@ FINGERPRINT=$FINGERPRINT
 MANUFACTURER=Google
 MODEL=$MODEL
 SECURITY_PATCH=$SECURITY_PATCH
+DEVICE_INITIAL_SDK_INT=$DEVICE_INITIAL_SDK_INT
 spoofBuild=$spoofBuild
 spoofProps=$spoofProps
 spoofProvider=$spoofProvider

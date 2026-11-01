@@ -153,6 +153,9 @@ public final class EntryPoint {
     }
 
     public static void init(String json, boolean spoofProvider, boolean spoofSignature, boolean spoofBuild) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            HiddenApiBypass.addHiddenApiExemptions("");
+        }
         if (spoofProvider) {
             spoofProvider();
         } else {

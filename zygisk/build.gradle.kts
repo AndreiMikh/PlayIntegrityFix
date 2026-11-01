@@ -7,6 +7,7 @@ plugins {
 }
 
 tasks.register("generateModulePropChecksum") {
+    description = "Generate Module Checksum"
     val propFile = project.rootDir.resolve("module/module.prop")
     val checksumHeader = project.projectDir.resolve("src/main/cpp/checksum.h")
 
@@ -29,9 +30,10 @@ tasks.named("preBuild") {
 
 android {
     namespace = "es.chiteroman.playintegrityfix"
-    compileSdk = 36
-    ndkVersion = "29.0.14206865"
-    buildToolsVersion = "36.1.0"
+    compileSdk = 37
+    compileSdkMinor = 2
+    ndkVersion = "30.0.16248370"
+    buildToolsVersion = "37.0.0"
 
     buildFeatures {
         prefab = true
@@ -51,7 +53,8 @@ android {
             cmake {
                 abiFilters(
                     "arm64-v8a",
-                    "armeabi-v7a"
+                    "armeabi-v7a",
+                    "x86_64"
                 )
 
                 arguments(
@@ -84,6 +87,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
             multiDexEnabled = false
             proguardFiles += file("proguard-rules.pro")
         }
@@ -97,7 +101,7 @@ android {
     externalNativeBuild {
         cmake {
             path("src/main/cpp/CMakeLists.txt")
-            version = "3.30.5+"
+            version = "4.1.2"
         }
     }
 }
